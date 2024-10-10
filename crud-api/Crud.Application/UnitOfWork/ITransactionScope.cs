@@ -16,6 +16,7 @@ public interface ITransactionScopeWithRepo<in TEntity>
 {
     ITransactionScopeReady Clear();
     ITransactionScopeWithChanges<TEntity> Add(TEntity item);
+    ITransactionScopeWithChanges<TEntity> AddBatch(IEnumerable<TEntity> batch);
     ITransactionScopeWithChanges<TEntity> Update(TEntity item);
     ITransactionScopeWithChanges<TEntity> Delete(TEntity item);
 }

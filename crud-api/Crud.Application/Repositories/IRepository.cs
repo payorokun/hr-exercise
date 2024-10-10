@@ -1,10 +1,11 @@
 ﻿namespace Crud.Application.Repositories;
 
-public interface IRepositoryWrite<in TEntity>
+public interface IRepositoryWrite<in TEntity> 
 {
     void Add(TEntity entity);
     void Update(TEntity entity);
     void Delete(TEntity entity);
+    Task SaveBatchAsync(IEnumerable<TEntity> batch);
     Task ClearQuotes();
 }
 public interface IRepository<TEntity> : IRepositoryWrite<TEntity>

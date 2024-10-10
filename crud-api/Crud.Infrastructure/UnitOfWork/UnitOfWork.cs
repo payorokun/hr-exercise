@@ -74,6 +74,12 @@ public class UnitOfWork(IApplicationDbContext dbContext) : IUnitOfWork
                 return this;
             }
 
+            public ITransactionScopeWithChanges<TEntity> AddBatch(IEnumerable<TEntity> batch)
+            {
+                transactionBuilder.AppendAction(()=> repository.SaveBatchAsync(batch));
+                return this;
+            }
+
             public ITransactionScopeWithChanges<TEntity> Update(TEntity item)
             {
                 transactionBuilder.AppendAction(() => repository.Update(item));

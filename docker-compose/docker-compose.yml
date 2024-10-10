@@ -10,6 +10,16 @@ services:
     networks:
       - mynetwork
 
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=StronK@Passw0rd
+    ports:
+      - "1433:1433"
+    networks:
+    - mynetwork
+
   crud.webapi:
     image: crud-api-image
     container_name: crud-api
@@ -20,7 +30,9 @@ services:
       - "5000:5000"           # Expose WebAPI on port 5000
     depends_on:
       - redis                 # Ensure Redis starts before the WebAPI
+      - sqlserver
     environment:
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=YourDatabaseName;User=sa;Password=StronK@Passw0rd;Encrypt=false;TrustServerCertificate=true
       - REDIS_CONNECTION_STRING=redis:6379  # Use Redis service name as the host
     networks:
       - mynetwork

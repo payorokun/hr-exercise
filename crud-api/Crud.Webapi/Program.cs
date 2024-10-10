@@ -8,6 +8,7 @@ using Crud.Application.Quotes.PairCount;
 using Crud.Application.Quotes.ProcessQuotesFile;
 using Crud.Application.Quotes.Update;
 using Crud.Infrastructure;
+using Crud.Infrastructure.Data;
 using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,9 +17,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestBodySize = 100 * 1024 * 1024; // 100 MB
+});
 
 var app = builder.Build();
+
+app.Services.EnsureDatabaseCreated();
 
 app.MapPost("/quotes", async (IMediator mediator, CreateUpdateQuoteDto newItem) =>
 {

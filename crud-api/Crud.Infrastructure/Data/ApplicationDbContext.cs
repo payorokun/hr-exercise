@@ -1,4 +1,5 @@
 using Crud.Domain.Models;
+using EFCore.BulkExtensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crud.Infrastructure.Data
@@ -15,7 +16,7 @@ namespace Crud.Infrastructure.Data
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
         }
 
-        private bool IsInMemory
+        public bool IsInMemory
         {
             get
             {
@@ -28,6 +29,11 @@ namespace Crud.Infrastructure.Data
         public Task ClearQuotesAsync()
         {
             return Database.ExecuteSqlRawAsync("DELETE FROM Quotes");
+        }
+
+        public Task SaveBatchAsync<TEntity>(IEnumerable<TEntity> batch) where TEntity:class
+        {
+            return this.BulkInsertAsync(batch);
         }
 
         public Task BeginTransactionAsync()
@@ -51,8 +57,10 @@ namespace Crud.Infrastructure.Data
 
     public interface IApplicationDbContext
     {
+        bool IsInMemory { get; }
         DbSet<Quote> Quotes { get; set; }
         Task ClearQuotesAsync();
+        Task SaveBatchAsync<TEntity>(IEnumerable<TEntity> batch) where TEntity : class;
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();

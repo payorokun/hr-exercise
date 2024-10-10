@@ -3,11 +3,10 @@ using Crud.Application.Repositories;
 using Crud.Application.UnitOfWork;
 using Crud.Domain.Models;
 using MediatR;
-using System.Text.Json;
 using Crud.Application.Dtos;
-using System;
 using Crud.Application.Util;
 using Newtonsoft.Json;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Crud.Application.Quotes.ProcessQuotesFile;
 
@@ -21,54 +20,63 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
     //read stream in batches
     private async Task ProcessJsonFromStreamAsync(Stream fileStream)
     {
+        await ClearQuotesRepo();
+
         var batch = new List<Quote>();
         const int batchSize = 1000;
-        using var streamReader = new StreamReader(fileStream);
-        using var jsonDocument = await JsonDocument.ParseAsync(fileStream);
+        
 
         int currentBatchCount = 0;
         var settings = new JsonSerializerSettings
         {
             Converters = { new QuoteJsonConverter() }
         };
-        //individual deserialization to apply mapping rules
-        foreach (var element in jsonDocument.RootElement.EnumerateArray())
-        {
-            var item = JsonConvert.DeserializeObject<CreateUpdateQuoteDto>(element.GetRawText(), settings);
-            //JsonSerializer.Deserialize<CreateUpdateQuoteDto>(element.GetRawText(), options);
-            if (item == null) continue;
+        using var streamReader = new StreamReader(fileStream);
+        await using var jsonReader = new JsonTextReader(streamReader);
+        var serializer = JsonSerializer.Create(settings);
 
+        //individual deserialization to apply mapping rules
+        while (await jsonReader.ReadAsync())
+        {
+            if (jsonReader.TokenType != JsonToken.StartObject)
+                continue;
+
+            // Deserialize each object as it is encountered
+            var item = serializer.Deserialize<CreateUpdateQuoteDto>(jsonReader);
+
+            if (item == null || item.Id == 0)
+                continue;  // skip invalid or unhandled entries
+
+            // Add to batch
             batch.Add(mapper.Map<Quote>(item));
             currentBatchCount++;
 
-            // When batch size is reached, save to DB
-            if (currentBatchCount != batchSize) continue;
-            await SaveBatchAsync(batch);
+            // Save in batches to avoid memory overload
+            if (currentBatchCount < batchSize) continue;
+
+            var currentBatch = new List<Quote>(batch);
+            await SaveBatchAsync(currentBatch);
             batch.Clear();
             currentBatchCount = 0;
         }
 
-        if (batch.Count == 0) return;
+        if (batch.Count > 0)
+        {
+            await SaveBatchAsync(batch);
+        }
+    }
 
-        await SaveBatchAsync(batch);
+    private async Task ClearQuotesRepo()
+    {
+        await unitOfWork.CreateTransaction()
+            .WithRepo(repository).Clear().CommitAsync();
     }
 
     private async Task SaveBatchAsync(List<Quote> items)
     {
         await unitOfWork.CreateTransaction()
-            .WithRepo(repository).Clear().CommitAsync();
-
-        var withRepo = unitOfWork.CreateTransaction()
-            .WithRepo(repository);
-
-        ITransactionScopeWithChanges<Quote> withChanges = null;
-        foreach (var item in items)
-        {
-            withChanges = withRepo.Add(item);
-        }
-
-        if (withChanges is null) return;
-        await withChanges
+            .WithRepo(repository)
+            .AddBatch(items)
             .Ready()
             .CommitAsync();
     }
