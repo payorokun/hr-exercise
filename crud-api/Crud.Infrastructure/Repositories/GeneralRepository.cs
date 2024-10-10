@@ -15,4 +15,8 @@ public class GeneralRepository<TEntity>(ApplicationDbContext context) : IReposit
 
     public void Update(TEntity entity) => context.Set<TEntity>().Update(entity);
     public void Delete(TEntity entity)=> context.Set<TEntity>().Remove(entity);
+    public async Task ClearQuotes()
+    {
+        await context.ClearQuotesAsync();
+    }
 }

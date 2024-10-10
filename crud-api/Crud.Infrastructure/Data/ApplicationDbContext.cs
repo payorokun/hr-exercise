@@ -25,6 +25,11 @@ namespace Crud.Infrastructure.Data
             }
         }
 
+        public Task ClearQuotesAsync()
+        {
+            return Database.ExecuteSqlRawAsync("DELETE FROM Quotes");
+        }
+
         public Task BeginTransactionAsync()
         {
             if (IsInMemory) return Task.CompletedTask;
@@ -47,6 +52,7 @@ namespace Crud.Infrastructure.Data
     public interface IApplicationDbContext
     {
         DbSet<Quote> Quotes { get; set; }
+        Task ClearQuotesAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();

@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Crud.Application.Cache;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 

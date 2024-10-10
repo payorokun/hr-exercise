@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7.0
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mynetwork
+
+  webapi:
+    image: crud-api-image
+    container_name: crud-api
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"           # Expose WebAPI on port 5000
+    depends_on:
+      - redis                 # Ensure Redis starts before the WebAPI
+    environment:
+      - REDIS_CONNECTION_STRING=redis:6379  # Use Redis service name as the host
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
+
+volumes:
+  redis_data:

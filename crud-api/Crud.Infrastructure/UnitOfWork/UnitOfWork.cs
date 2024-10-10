@@ -51,7 +51,9 @@ public class UnitOfWork(IApplicationDbContext dbContext) : IUnitOfWork
         private class TransactionScopeForRepository<TEntity>(
             IRepositoryWrite<TEntity> repository,
             ITransactionScopeReady transactionScopeReady,
-            ITransactionBuilder transactionBuilder) : ITransactionScopeWithRepo<TEntity>
+            ITransactionBuilder transactionBuilder) : 
+            ITransactionScopeWithRepo<TEntity>, 
+            ITransactionScopeWithChanges<TEntity>
         {
             public ITransactionScopeWithRepo<TOtherEntity> AndForRepo<TOtherEntity>(
                 IRepositoryWrite<TOtherEntity> otherRepository)
@@ -60,19 +62,25 @@ public class UnitOfWork(IApplicationDbContext dbContext) : IUnitOfWork
                     otherRepository, transactionScopeReady, transactionBuilder);
             }
 
-            public ITransactionScopeWithRepo<TEntity> Add(TEntity item)
+            public ITransactionScopeReady Clear()
+            {
+                transactionBuilder.AppendAction(() => repository.ClearQuotes());
+                return transactionScopeReady;
+            }
+
+            public ITransactionScopeWithChanges<TEntity> Add(TEntity item)
             {
                 transactionBuilder.AppendAction(()=> repository.Add(item));
                 return this;
             }
 
-            public ITransactionScopeWithRepo<TEntity> Update(TEntity item)
+            public ITransactionScopeWithChanges<TEntity> Update(TEntity item)
             {
                 transactionBuilder.AppendAction(() => repository.Update(item));
                 return this;
             }
 
-            public ITransactionScopeWithRepo<TEntity> Delete(TEntity item)
+            public ITransactionScopeWithChanges<TEntity> Delete(TEntity item)
             {
                 transactionBuilder.AppendAction(() => repository.Delete(item));
                 return this;

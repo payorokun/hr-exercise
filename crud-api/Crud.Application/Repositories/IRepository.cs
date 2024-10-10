@@ -5,6 +5,7 @@ public interface IRepositoryWrite<in TEntity>
     void Add(TEntity entity);
     void Update(TEntity entity);
     void Delete(TEntity entity);
+    Task ClearQuotes();
 }
 public interface IRepository<TEntity> : IRepositoryWrite<TEntity>
 {

@@ -14,11 +14,16 @@ public interface ITransactionBuilder
 }
 public interface ITransactionScopeWithRepo<in TEntity>
 {
+    ITransactionScopeReady Clear();
+    ITransactionScopeWithChanges<TEntity> Add(TEntity item);
+    ITransactionScopeWithChanges<TEntity> Update(TEntity item);
+    ITransactionScopeWithChanges<TEntity> Delete(TEntity item);
+}
+
+public interface ITransactionScopeWithChanges<in TEntity> : ITransactionScopeWithRepo<TEntity>
+{
     ITransactionScopeWithRepo<TOtherEntity> AndForRepo<TOtherEntity>(
         IRepositoryWrite<TOtherEntity> otherRepository);
-    ITransactionScopeWithRepo<TEntity> Add(TEntity item);
-    ITransactionScopeWithRepo<TEntity> Update(TEntity item);
-    ITransactionScopeWithRepo<TEntity> Delete(TEntity item);
     ITransactionScopeReady Ready();
 }
 

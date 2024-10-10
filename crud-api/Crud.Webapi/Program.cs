@@ -4,6 +4,8 @@ using Crud.Application.Quotes.Create;
 using Crud.Application.Quotes.Delete;
 using Crud.Application.Quotes.Get;
 using Crud.Application.Quotes.List;
+using Crud.Application.Quotes.PairCount;
+using Crud.Application.Quotes.ProcessQuotesFile;
 using Crud.Application.Quotes.Update;
 using Crud.Infrastructure;
 using MediatR;
@@ -50,6 +52,24 @@ app.MapDelete("/quotes/{id}", async (IMediator mediator, int id) =>
 {
     await mediator.Send(new DeleteQuoteCommand(id));
     return Results.NoContent();
+});
+
+app.MapGet("/quotes/matches/{length}", async (IMediator mediator, int length) =>
+{
+    var pairs = await mediator.Send(new GetQuotePairCountByLengthQuery(length));
+    return pairs is not null ? Results.Ok(pairs) : Results.NotFound();
+});
+
+app.MapPost("/quotes/upload", async (IMediator mediator, IFormFile file) =>
+{
+    if (file.Length == 0)
+    {
+        return Results.BadRequest("No file uploaded.");
+    }
+
+    var command = new ProcessQuotesFileCommand(file.OpenReadStream());
+    await mediator.Send(command);
+    return Results.Ok();
 });
 
 
