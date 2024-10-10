@@ -1,0 +1,65 @@
+using Crud.Application;
+using Crud.Application.Dtos;
+using Crud.Application.Quotes.Create;
+using Crud.Application.Quotes.Delete;
+using Crud.Application.Quotes.Get;
+using Crud.Application.Quotes.List;
+using Crud.Application.Quotes.Update;
+using Crud.Infrastructure;
+using MediatR;
+
+var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
+
+var app = builder.Build();
+
+app.MapPost("/quotes", async (IMediator mediator, CreateUpdateQuoteDto newItem) =>
+{
+    var command = new CreateQuoteCommand(newItem);
+    var quote = await mediator.Send(command);
+    return Results.Created($"/quotes/{quote.Id}", quote);
+});
+
+app.MapGet("/quotes/{id}", async (IMediator mediator, int id) =>
+{
+    var quote = await mediator.Send(new GetQuoteByIdQuery(id));
+    return quote is not null ? Results.Ok(quote) : Results.NotFound();
+});
+
+app.MapGet("/quotes", async (IMediator mediator) =>
+{
+    var quote = await mediator.Send(new GetQuotesQuery());
+    return quote is not null ? Results.Ok(quote) : Results.NotFound();
+});
+
+app.MapPut("/quotes/{id}", async (IMediator mediator, int id, CreateUpdateQuoteDto updatedItem) =>
+{
+    var command = new UpdateQuoteCommand(id, updatedItem);
+    if (id != command.UpdatedQuote.Id) return Results.BadRequest();
+
+    var updatedQuote = await mediator.Send(command);
+    return updatedQuote is not null ? Results.Ok(updatedQuote) : Results.NotFound();
+});
+
+app.MapDelete("/quotes/{id}", async (IMediator mediator, int id) =>
+{
+    await mediator.Send(new DeleteQuoteCommand(id));
+    return Results.NoContent();
+});
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+
+app.Run();
