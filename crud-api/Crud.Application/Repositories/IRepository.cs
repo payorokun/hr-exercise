@@ -5,11 +5,15 @@ public interface IRepositoryWrite<in TEntity>
     void Add(TEntity entity);
     void Update(TEntity entity);
     void Delete(TEntity entity);
-    Task SaveBatchAsync(IEnumerable<TEntity> batch);
     Task ClearQuotes();
 }
 public interface IRepository<TEntity> : IRepositoryWrite<TEntity>
 {
     Task<TEntity> GetByIdAsync(int id);
     Task<IEnumerable<TEntity>> GetAllAsync();
+}
+
+public interface IRepositoryForBatch<in TEntity>
+{
+    Task SaveBatchAsync(IEnumerable<TEntity> batch);
 }

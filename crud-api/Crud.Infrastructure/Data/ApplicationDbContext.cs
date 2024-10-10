@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Crud.Infrastructure.Data
 {
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : DbContext(options), IApplicationDbContext
+        : DbContext(options), IApplicationDbContext, IApplicationDbContextForBatch
     {
         public DbSet<Quote> Quotes { get; set; }
         private bool? _isInMemory;
@@ -26,14 +26,25 @@ namespace Crud.Infrastructure.Data
             }
         }
 
-        public Task ClearQuotesAsync()
+        public async Task ClearQuotesAsync()
         {
-            return Database.ExecuteSqlRawAsync("DELETE FROM Quotes");
+            await Database.ExecuteSqlRawAsync("DELETE FROM Quotes");
+            foreach (var entityEntry in ChangeTracker.Entries<Quote>())
+            {
+                entityEntry.State = EntityState.Detached;
+            }
         }
 
         public Task SaveBatchAsync<TEntity>(IEnumerable<TEntity> batch) where TEntity:class
         {
-            return this.BulkInsertAsync(batch);
+            if (IsInMemory)
+            {
+                return Set<TEntity>().AddRangeAsync(batch);
+            }
+            else
+            {
+                return this.BulkInsertAsync(batch);
+            }
         }
 
         public Task BeginTransactionAsync()
@@ -60,11 +71,15 @@ namespace Crud.Infrastructure.Data
         bool IsInMemory { get; }
         DbSet<Quote> Quotes { get; set; }
         Task ClearQuotesAsync();
-        Task SaveBatchAsync<TEntity>(IEnumerable<TEntity> batch) where TEntity : class;
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         DbSet<TEntity> Set<TEntity>() where TEntity : class;
+    }
+
+    public interface IApplicationDbContextForBatch : IApplicationDbContext
+    {
+        Task SaveBatchAsync<TEntity>(IEnumerable<TEntity> batch) where TEntity : class;
     }
 }

@@ -26,10 +26,15 @@ public static class DependencyInjection
         services.AddDbContext<IApplicationDbContext, ApplicationDbContext>((sp, options) =>
         {
             var interceptor = sp.GetRequiredService<QuoteChangeInterceptor>();
-            //options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-            //    .AddInterceptors(interceptor);
-            options.UseInMemoryDatabase("hr-quotes")
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
                 .AddInterceptors(interceptor);
+            //options.UseInMemoryDatabase("hr-quotes")
+            //    .AddInterceptors(interceptor);
+        });
+        services.AddDbContext<IApplicationDbContextForBatch, ApplicationDbContext>(options =>
+        {
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+            //options.UseInMemoryDatabase("hr-quotes");
         });
         return services;
     }
@@ -37,6 +42,7 @@ public static class DependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped(typeof(IRepository<>), typeof(GeneralRepository<>));
+        services.AddScoped(typeof(IRepositoryForBatch<>), typeof(BatchEnabledRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
         return services;
     }

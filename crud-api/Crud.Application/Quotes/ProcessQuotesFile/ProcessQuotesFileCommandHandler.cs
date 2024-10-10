@@ -7,10 +7,11 @@ using Crud.Application.Dtos;
 using Crud.Application.Util;
 using Newtonsoft.Json;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
+using Crud.Application.Cache;
 
 namespace Crud.Application.Quotes.ProcessQuotesFile;
 
-public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository<Quote> repository, IMapper mapper) : IRequestHandler<ProcessQuotesFileCommand>
+public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository<Quote> defaultRepository, IRepositoryForBatch<Quote> batchRepository, IMapper mapper, IQuotesLengthCacheService quotesLengthCacheService) : IRequestHandler<ProcessQuotesFileCommand>
 {
     public async Task Handle(ProcessQuotesFileCommand request, CancellationToken cancellationToken)
     {
@@ -20,7 +21,7 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
     //read stream in batches
     private async Task ProcessJsonFromStreamAsync(Stream fileStream)
     {
-        await ClearQuotesRepo();
+        await DataCleanup();
 
         var batch = new List<Quote>();
         const int batchSize = 1000;
@@ -66,19 +67,48 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
         }
     }
 
+    private async Task UpdateQuoteLengthCache(IEnumerable<Quote> currentBatch)
+    {
+        var tasks = currentBatch.Select(quote =>
+            quotesLengthCacheService.IncreaseQuoteCountForLength(quote.TextLength)
+        );
+        //parallelize
+        await Task.WhenAll(tasks);
+    }
+
+    /// <summary>
+    /// When uploading a file, we're clearing all existing data
+    /// to use the file as the new data source
+    /// and avoid implementing a strategy to find and update items in both db and cache
+    /// </summary>
+    /// <returns></returns>
+    private async Task DataCleanup()
+    {
+        await ClearQuotesRepo();
+        await ClearQuotesCache();
+    }
+
+    private async Task ClearQuotesCache()
+    {
+        await quotesLengthCacheService.Clear();
+    }
+
     private async Task ClearQuotesRepo()
     {
         await unitOfWork.CreateTransaction()
-            .WithRepo(repository).Clear().CommitAsync();
+            .WithRepo(defaultRepository).Clear().CommitAsync();
     }
 
     private async Task SaveBatchAsync(List<Quote> items)
     {
         await unitOfWork.CreateTransaction()
-            .WithRepo(repository)
+            .WithBatchRepo(batchRepository)
             .AddBatch(items)
             .Ready()
             .CommitAsync();
+
+        //forcing cache update since we're using EF batchInsert, and it does not track instances
+        //await UpdateQuoteLengthCache(items);
     }
 
 }

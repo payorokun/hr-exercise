@@ -16,8 +16,8 @@ public class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheS
             return await base.SavingChangesAsync(eventData, result, cancellationToken);
         }
 
-        await ClearCaches();
-        // Get all tracked entities (quotes in this case) and detect their states
+        await ClearCalculatedPairsCache();
+        
         var entries = context.ChangeTracker.Entries<Quote>();
 
         await UpdateCacheWithChanges(entries);
@@ -58,9 +58,8 @@ public class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheS
         }
     }
 
-    private async Task ClearCaches()
+    private async Task ClearCalculatedPairsCache()
     {
-        await quotesLengthCacheService.Clear();
         await calculatedPairsCacheService.Clear();
     }
 }

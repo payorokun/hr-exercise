@@ -16,6 +16,13 @@ public class UnitOfWork(IApplicationDbContext dbContext) : IUnitOfWork
                 this as ITransactionScopeReady, 
                 this as ITransactionBuilder);
         }
+        public ITransactionScopeWithBatchRepo<TEntity> WithBatchRepo<TEntity>(IRepositoryForBatch<TEntity> repository)
+        {
+            return new BatchTransactionScopeForRepository<TEntity>(
+                repository,
+                this as ITransactionScopeReady,
+                this as ITransactionBuilder);
+        }
 
         void ITransactionBuilder.AppendAction(Action action)
         {
@@ -74,12 +81,6 @@ public class UnitOfWork(IApplicationDbContext dbContext) : IUnitOfWork
                 return this;
             }
 
-            public ITransactionScopeWithChanges<TEntity> AddBatch(IEnumerable<TEntity> batch)
-            {
-                transactionBuilder.AppendAction(()=> repository.SaveBatchAsync(batch));
-                return this;
-            }
-
             public ITransactionScopeWithChanges<TEntity> Update(TEntity item)
             {
                 transactionBuilder.AppendAction(() => repository.Update(item));
@@ -89,6 +90,25 @@ public class UnitOfWork(IApplicationDbContext dbContext) : IUnitOfWork
             public ITransactionScopeWithChanges<TEntity> Delete(TEntity item)
             {
                 transactionBuilder.AppendAction(() => repository.Delete(item));
+                return this;
+            }
+
+            public ITransactionScopeReady Ready()
+            {
+                return transactionScopeReady;
+            }
+        }
+
+        private class BatchTransactionScopeForRepository<TEntity>(
+            IRepositoryForBatch<TEntity> repository,
+            ITransactionScopeReady transactionScopeReady,
+            ITransactionBuilder transactionBuilder) :
+            ITransactionScopeWithBatchRepo<TEntity>,
+            ITransactionScopeComplete
+        {
+            public ITransactionScopeComplete AddBatch(IEnumerable<TEntity> batch)
+            {
+                transactionBuilder.AppendAction(() => repository.SaveBatchAsync(batch));
                 return this;
             }
 
