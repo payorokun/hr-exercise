@@ -26,10 +26,10 @@ public static class DependencyInjection
         services.AddDbContext<IApplicationDbContext, ApplicationDbContext>((sp, options) =>
         {
             var interceptor = sp.GetRequiredService<QuoteChangeInterceptor>();
-            //options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-            //    .AddInterceptors(interceptor);
-            options.UseInMemoryDatabase("hr-quotes")
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
                 .AddInterceptors(interceptor);
+            //options.UseInMemoryDatabase("hr-quotes")
+            //    .AddInterceptors(interceptor);
         });
         return services;
     }

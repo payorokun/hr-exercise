@@ -7,6 +7,7 @@ internal class QuoteConfiguration : IEntityTypeConfiguration<Quote>
 {
     public void Configure(EntityTypeBuilder<Quote> builder)
     {
+        builder.Property(q => q.Id).ValueGeneratedNever();
         builder.HasKey(q => q.Id);
         builder.Property(q => q.Author).IsRequired().HasMaxLength(50);
         builder.Property(q => q.Text).IsRequired().HasMaxLength(500);

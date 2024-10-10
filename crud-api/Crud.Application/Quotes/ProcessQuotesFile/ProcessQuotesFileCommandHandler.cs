@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Crud.Application.Cache;
 using Crud.Application.Repositories;
 using Crud.Application.UnitOfWork;
 using Crud.Domain.Models;
@@ -10,7 +11,7 @@ using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Crud.Application.Quotes.ProcessQuotesFile;
 
-public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository<Quote> repository, IMapper mapper) : IRequestHandler<ProcessQuotesFileCommand>
+public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository<Quote> repository, IMapper mapper, IQuotesLengthCacheService quotesLengthCacheService) : IRequestHandler<ProcessQuotesFileCommand>
 {
     public async Task Handle(ProcessQuotesFileCommand request, CancellationToken cancellationToken)
     {
@@ -20,7 +21,7 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
     //read stream in batches
     private async Task ProcessJsonFromStreamAsync(Stream fileStream)
     {
-        await ClearQuotesRepo();
+        await Cleanup();
 
         var batch = new List<Quote>();
         const int batchSize = 1000;
@@ -64,6 +65,17 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
         {
             await SaveBatchAsync(batch);
         }
+    }
+
+    private async Task Cleanup()
+    {
+        await ClearQuotesCache();
+        await ClearQuotesRepo();
+    }
+
+    private async Task ClearQuotesCache()
+    {
+        await quotesLengthCacheService.Clear();
     }
 
     private async Task ClearQuotesRepo()

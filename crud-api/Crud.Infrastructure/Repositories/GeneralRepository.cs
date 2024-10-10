@@ -15,17 +15,7 @@ public class GeneralRepository<TEntity>(IApplicationDbContext context) : IReposi
 
     public void Update(TEntity entity) => context.Set<TEntity>().Update(entity);
     public void Delete(TEntity entity)=> context.Set<TEntity>().Remove(entity);
-    public async Task SaveBatchAsync(IEnumerable<TEntity> batch)
-    {
-        if (context.IsInMemory)
-        {
-            context.Set<TEntity>().AddRange(batch);
-        }
-        else
-        {
-            await context.SaveBatchAsync(batch);
-        }
-    }
+    public async Task SaveBatchAsync(IEnumerable<TEntity> batch) => await context.SaveBatchAsync(batch);
 
     public async Task ClearQuotes() => await context.ClearQuotesAsync();
 }

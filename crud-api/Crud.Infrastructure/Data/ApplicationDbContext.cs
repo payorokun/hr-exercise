@@ -33,7 +33,8 @@ namespace Crud.Infrastructure.Data
 
         public Task SaveBatchAsync<TEntity>(IEnumerable<TEntity> batch) where TEntity:class
         {
-            return this.BulkInsertAsync(batch);
+            return Set<TEntity>().AddRangeAsync(batch);
+            //return this.BulkInsertAsync(batch);
         }
 
         public Task BeginTransactionAsync()
