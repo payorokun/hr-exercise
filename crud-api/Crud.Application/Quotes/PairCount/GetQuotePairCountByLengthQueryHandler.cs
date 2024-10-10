@@ -35,36 +35,60 @@ public class GetQuotePairCountByLengthQueryHandler(IRepository<Quote> repository
 
         // Two-pointer approach to find the number of pairs
         var totalPairs = 0;
-        
-        var left = 0;
+
         var right = quoteLengths.Count - 1;
 
-        while (left <= right)
+        while (right>0)
         {
-            var leftLength = quoteLengths[left].Length;
-            var leftCount = quoteLengths[left].Count;
-
-            var rightLength = quoteLengths[right].Length;
-            var rightCount = quoteLengths[right].Count;
-
-            if (leftLength + rightLength <= maxLength)
+            var left = 0;
+            while (left <= right && left >=0)
             {
-                if (left == right)
+                var leftLength = quoteLengths[left].Length;
+                var leftCount = quoteLengths[left].Count;
+
+                var rightLength = quoteLengths[right].Length;
+                var rightCount = quoteLengths[right].Count;
+
+                //skip zeros
+                if (leftCount <= 0)
                 {
-                    // Pairs within the same length, use combination formula
-                    totalPairs += (leftCount * (leftCount - 1)) / 2;
+                    left++;
+                    continue;
+                }
+                if (rightCount <= 0)
+                {
+                    right--;
+                    continue;
+                }
+
+                if (leftLength + rightLength <= maxLength)
+                {
+                    if (left == right)
+                    {
+                        if (leftCount > 1)
+                        {
+                            // Pairs within the same length, use combination formula
+                            totalPairs += (leftCount * (leftCount - 1)) / 2;
+                        }
+                    }
+                    else
+                    {
+                        // Pairs between different lengths, just a*b
+                        totalPairs += leftCount * rightCount;
+                    }
+
+                    left++;
                 }
                 else
                 {
-                    // Pairs between different lengths, just a*b
-                    totalPairs += leftCount * rightCount;
+                    if (rightLength == maxLength && rightCount > 1)
+                    {
+                        totalPairs += (rightCount * (rightCount - 1)) / 2;
+                    }
+                    break;
                 }
-                left++;
             }
-            else
-            {
-                right--;
-            }
+            right--;
         }
 
         return new QuotePairCountQueryResult(maxLength, totalPairs);

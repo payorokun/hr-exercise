@@ -2,25 +2,34 @@
 using Crud.Application.Cache;
 using Crud.Domain.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Crud.Infrastructure.UnitOfWork;
-public class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheService) : SaveChangesInterceptor
+public class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheService, ICalculatedPairsCacheService calculatedPairsCacheService) : SaveChangesInterceptor
 {
-    public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
         var context = eventData.Context;
         if (context == null)
         {
-            return await base.SavedChangesAsync(eventData, result, cancellationToken);
+            return await base.SavingChangesAsync(eventData, result, cancellationToken);
         }
 
+        await ClearCaches();
         // Get all tracked entities (quotes in this case) and detect their states
         var entries = context.ChangeTracker.Entries<Quote>();
 
+        await UpdateCacheWithChanges(entries);
+
+        return await base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    private async Task UpdateCacheWithChanges(IEnumerable<EntityEntry<Quote>> entries)
+    {
         foreach (var entry in entries)
         {
-            var quoteLength = entry.Entity.Text.Length;
+            var quoteLength = entry.Entity.TextLength;
 
             switch (entry.State)
             {
@@ -47,8 +56,12 @@ public class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheS
                     break;
             }
         }
+    }
 
-        return await base.SavedChangesAsync(eventData, result, cancellationToken);
+    private async Task ClearCaches()
+    {
+        await quotesLengthCacheService.Clear();
+        await calculatedPairsCacheService.Clear();
     }
 }
 

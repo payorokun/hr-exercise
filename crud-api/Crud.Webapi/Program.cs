@@ -70,7 +70,7 @@ app.MapPost("/quotes/upload", async (IMediator mediator, IFormFile file) =>
     var command = new ProcessQuotesFileCommand(file.OpenReadStream());
     await mediator.Send(command);
     return Results.Ok();
-});
+}).DisableAntiforgery();
 
 
 if (app.Environment.IsDevelopment())

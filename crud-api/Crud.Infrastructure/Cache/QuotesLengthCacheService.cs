@@ -8,26 +8,37 @@ public class QuotesLengthCacheService(IConnectionMultiplexer redisConnection) : 
     public async Task IncreaseQuoteCountForLength(int length)
     {
         var db = redisConnection.GetDatabase();
-        await db.SortedSetIncrementAsync(Key, length.ToString(), 1);
+        await db.HashIncrementAsync(Key, length.ToString(), 1);
     }
 
     public async Task DecreaseQuoteCountForLength(int length)
     {
         var db = redisConnection.GetDatabase();
-        await db.SortedSetIncrementAsync(Key, length.ToString(), -1);
+        await db.HashIncrementAsync(Key, length.ToString(), -1);
 
         // If the count reaches 0, remove the length from the sorted set
-        var count = await db.SortedSetScoreAsync(Key, length.ToString());
-        if (count <= 0)
+        var count = await db.HashGetAsync(Key, length.ToString());
+        if (count.HasValue || (int)count <= 0)
         {
-            await db.SortedSetRemoveAsync(Key, length.ToString());
+            await db.HashDeleteAsync(Key, length.ToString());
         }
     }
 
     public async Task<List<QuotesLengthCacheEntity>> GetByTextLength(int length)
     {
         var db = redisConnection.GetDatabase();
-        var quoteLengths = await db.SortedSetRangeByScoreWithScoresAsync(Key, 0, length);
-        return quoteLengths.Select(q=> new QuotesLengthCacheEntity((int)q.Score, (int)q.Element)).ToList();
+        var hashEntries = await db.HashGetAllAsync(Key);
+        var quoteLengths = hashEntries
+            .Select(entry => new QuotesLengthCacheEntity(int.Parse(entry.Name), (int) entry.Value))
+            .Where(q => q.Length <= length)
+            .OrderBy(q => q.Length)
+            .ToList();
+        return quoteLengths;
+    }
+
+    public Task Clear()
+    {
+        var db = redisConnection.GetDatabase();
+        return db.KeyDeleteAsync(Key);
     }
 }

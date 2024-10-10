@@ -5,6 +5,9 @@ using Crud.Domain.Models;
 using MediatR;
 using System.Text.Json;
 using Crud.Application.Dtos;
+using System;
+using Crud.Application.Util;
+using Newtonsoft.Json;
 
 namespace Crud.Application.Quotes.ProcessQuotesFile;
 
@@ -24,11 +27,15 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
         using var jsonDocument = await JsonDocument.ParseAsync(fileStream);
 
         int currentBatchCount = 0;
-
+        var settings = new JsonSerializerSettings
+        {
+            Converters = { new QuoteJsonConverter() }
+        };
+        //individual deserialization to apply mapping rules
         foreach (var element in jsonDocument.RootElement.EnumerateArray())
         {
-            // Deserialize the individual item
-            var item = JsonSerializer.Deserialize<CreateUpdateQuoteDto>(element.GetRawText());
+            var item = JsonConvert.DeserializeObject<CreateUpdateQuoteDto>(element.GetRawText(), settings);
+            //JsonSerializer.Deserialize<CreateUpdateQuoteDto>(element.GetRawText(), options);
             if (item == null) continue;
 
             batch.Add(mapper.Map<Quote>(item));
@@ -48,6 +55,9 @@ public class ProcessQuotesFileCommandHandler(IUnitOfWork unitOfWork, IRepository
 
     private async Task SaveBatchAsync(List<Quote> items)
     {
+        await unitOfWork.CreateTransaction()
+            .WithRepo(repository).Clear().CommitAsync();
+
         var withRepo = unitOfWork.CreateTransaction()
             .WithRepo(repository);
 

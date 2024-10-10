@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Crud.Infrastructure.Repositories;
 
-public class GeneralRepository<TEntity>(ApplicationDbContext context) : IRepository<TEntity>
+public class GeneralRepository<TEntity>(IApplicationDbContext context) : IRepository<TEntity>
     where TEntity : class
 {
     public async Task<TEntity> GetByIdAsync(int id) => await context.Set<TEntity>().FindAsync(id);

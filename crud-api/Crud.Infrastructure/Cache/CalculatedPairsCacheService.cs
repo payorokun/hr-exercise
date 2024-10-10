@@ -21,4 +21,10 @@ public class CalculatedPairsCacheService(IConnectionMultiplexer redisConnection)
         var db = redisConnection.GetDatabase();
         await db.HashSetAsync(Key, length, count);
     }
+
+    public async Task Clear()
+    {
+        var db = redisConnection.GetDatabase();
+        await db.KeyDeleteAsync(Key);
+    }
 }
