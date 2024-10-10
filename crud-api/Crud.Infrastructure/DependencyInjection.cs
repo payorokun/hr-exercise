@@ -22,7 +22,7 @@ public static class DependencyInjection
     private static IServiceCollection AddLocalDbContext(this IServiceCollection services)
     {
         services.AddSingleton<QuoteChangeInterceptor>();
-        services.AddDbContext<ApplicationDbContext>((sp, options) =>
+        services.AddDbContext<IApplicationDbContext, ApplicationDbContext>((sp, options) =>
         {
             var interceptor = sp.GetRequiredService<QuoteChangeInterceptor>();
             options.UseInMemoryDatabase("hr-quotes")
@@ -35,8 +35,6 @@ public static class DependencyInjection
     {
         services.AddScoped(typeof(IRepository<>), typeof(GeneralRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
-        services.AddScoped<IQuotesLengthCacheService, QuotesLengthCacheService>();
-        services.AddScoped<ICalculatedPairsCacheService, CalculatedPairsCacheService>();
         return services;
     }
 
@@ -44,11 +42,16 @@ public static class DependencyInjection
     {
         services.AddSingleton<IConnectionMultiplexer>(provider =>
         {
-            var configuration = ConfigurationOptions.Parse("localhost:6379");
-            return ConnectionMultiplexer.Connect(configuration);
+            var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+            if (string.IsNullOrEmpty(redisConnectionString))
+            {
+                throw new InvalidOperationException("The Redis connection string is not set in the environment variables.");
+            }
+            return ConnectionMultiplexer.Connect(redisConnectionString);
         });
 
-        services.AddScoped<IQuotesLengthCacheService, QuotesLengthCacheService>();
+        services.AddSingleton<IQuotesLengthCacheService, QuotesLengthCacheService>();
+        services.AddSingleton<ICalculatedPairsCacheService, CalculatedPairsCacheService>();
         return services;
     }
 }

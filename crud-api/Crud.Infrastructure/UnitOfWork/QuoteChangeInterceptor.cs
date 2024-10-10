@@ -4,7 +4,7 @@ using Crud.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Crud.Infrastructure.UnitOfWork;
-internal class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheService) : SaveChangesInterceptor
+public class QuoteChangeInterceptor(IQuotesLengthCacheService quotesLengthCacheService) : SaveChangesInterceptor
 {
     public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
         CancellationToken cancellationToken = default)
